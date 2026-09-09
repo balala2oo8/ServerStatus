@@ -88,7 +88,7 @@ void CMain::OnNewClient(int ClientNetID, int ClientID)
 	Client(ClientID)->m_TimeConnected = time_get();
 	Client(ClientID)->m_Connected = true;
 
-	// record client source ip for web page display.
+	// 记录节点来源IP，用于页面展示
 	net_addr_str(m_Server.Network()->ClientAddr(ClientNetID), Client(ClientID)->m_aIP, sizeof(Client(ClientID)->m_aIP), false);
 
 	if(Client(ClientID)->m_ClientNetType == NETTYPE_IPV4)
@@ -151,6 +151,9 @@ int CMain::HandleMessage(int ClientNetID, char *pMessage)
 				m_Server.Network()->Send(ClientNetID, "1");
 			return 1;
 		}
+
+		// 记录最近一次成功上报数据的时间，用于页面展示
+		pClient->m_LastUpdate = time(0);
 
 		// extract data
 		const json_value &rStart = (*pJsonData);
@@ -449,8 +452,9 @@ void CMain::JSONUpdateThread(void *pUser)
                 }
 
 				str_format(pBuf, sizeof(aFileBuf) - (pBuf - aFileBuf),
-				 "{ \"name\": \"%s\",\"type\": \"%s\",\"host\": \"%s\",\"location\": \"%s\",\"ip\": \"%s\",\"online4\": %s, \"online6\": %s, \"uptime\": \"%s\",\"load_1\": %.2f, \"load_5\": %.2f, \"load_15\": %.2f,\"ping_10010\": %.2f, \"ping_189\": %.2f, \"ping_10086\": %.2f,\"time_10010\": %" PRId64 ", \"time_189\": %" PRId64 ", \"time_10086\": %" PRId64 ", \"tcp_count\": %" PRId64 ", \"udp_count\": %" PRId64 ", \"process_count\": %" PRId64 ", \"thread_count\": %" PRId64 ", \"network_rx\": %" PRId64 ", \"network_tx\": %" PRId64 ", \"network_in\": %" PRId64 ", \"network_out\": %" PRId64 ", \"cpu\": %d, \"memory_total\": %" PRId64 ", \"memory_used\": %" PRId64 ", \"swap_total\": %" PRId64 ", \"swap_used\": %" PRId64 ", \"hdd_total\": %" PRId64 ", \"hdd_used\": %" PRId64 ", \"last_network_in\": %" PRId64 ", \"last_network_out\": %" PRId64 ",\"io_read\": %" PRId64 ", \"io_write\": %" PRId64 ",\"custom\": \"%s\" },\n",
+				 "{ \"name\": \"%s\",\"type\": \"%s\",\"host\": \"%s\",\"location\": \"%s\",\"ip\": \"%s\",\"last_update\": %" PRId64 ",\"online4\": %s, \"online6\": %s, \"uptime\": \"%s\",\"load_1\": %.2f, \"load_5\": %.2f, \"load_15\": %.2f,\"ping_10010\": %.2f, \"ping_189\": %.2f, \"ping_10086\": %.2f,\"time_10010\": %" PRId64 ", \"time_189\": %" PRId64 ", \"time_10086\": %" PRId64 ", \"tcp_count\": %" PRId64 ", \"udp_count\": %" PRId64 ", \"process_count\": %" PRId64 ", \"thread_count\": %" PRId64 ", \"network_rx\": %" PRId64 ", \"network_tx\": %" PRId64 ", \"network_in\": %" PRId64 ", \"network_out\": %" PRId64 ", \"cpu\": %d, \"memory_total\": %" PRId64 ", \"memory_used\": %" PRId64 ", \"swap_total\": %" PRId64 ", \"swap_used\": %" PRId64 ", \"hdd_total\": %" PRId64 ", \"hdd_used\": %" PRId64 ", \"last_network_in\": %" PRId64 ", \"last_network_out\": %" PRId64 ",\"io_read\": %" PRId64 ", \"io_write\": %" PRId64 ",\"custom\": \"%s\" },\n",
 					pClients[i].m_aName,pClients[i].m_aType,pClients[i].m_aHost,pClients[i].m_aLocation,pClients[i].m_aIP,
+					pClients[i].m_LastUpdate,
 					pClients[i].m_Stats.m_Online4 ? "true" : "false",pClients[i].m_Stats.m_Online6 ? "true" : "false",
 					aUptime, pClients[i].m_Stats.m_Load_1, pClients[i].m_Stats.m_Load_5, pClients[i].m_Stats.m_Load_15, pClients[i].m_Stats.m_ping_10010, pClients[i].m_Stats.m_ping_189, pClients[i].m_Stats.m_ping_10086,
 					pClients[i].m_Stats.m_time_10010, pClients[i].m_Stats.m_time_189, pClients[i].m_Stats.m_time_10086,pClients[i].m_Stats.m_tcpCount,pClients[i].m_Stats.m_udpCount,pClients[i].m_Stats.m_processCount,pClients[i].m_Stats.m_threadCount,
@@ -466,8 +470,8 @@ void CMain::JSONUpdateThread(void *pUser)
 			{
 			    // sava network traffic record to json when close client
 			    // last_network_in == last network in record, last_network_out == last network out record
-				str_format(pBuf, sizeof(aFileBuf) - (pBuf - aFileBuf), "{ \"name\": \"%s\", \"type\": \"%s\", \"host\": \"%s\", \"location\": \"%s\", \"ip\": \"%s\", \"online4\": false, \"online6\": false, \"last_network_in\": %" PRId64 ", \"last_network_out\": %" PRId64 " },\n",
-					pClients[i].m_aName, pClients[i].m_aType, pClients[i].m_aHost, pClients[i].m_aLocation, pClients[i].m_aIP, pClients[i].m_LastNetworkIN, pClients[i].m_LastNetworkOUT);
+				str_format(pBuf, sizeof(aFileBuf) - (pBuf - aFileBuf), "{ \"name\": \"%s\", \"type\": \"%s\", \"host\": \"%s\", \"location\": \"%s\", \"ip\": \"%s\", \"last_update\": %" PRId64 ", \"online4\": false, \"online6\": false, \"last_network_in\": %" PRId64 ", \"last_network_out\": %" PRId64 " },\n",
+					pClients[i].m_aName, pClients[i].m_aType, pClients[i].m_aHost, pClients[i].m_aLocation, pClients[i].m_aIP, pClients[i].m_LastUpdate, pClients[i].m_LastNetworkIN, pClients[i].m_LastNetworkOUT);
 				pBuf += strlen(pBuf);
 			}
 		}

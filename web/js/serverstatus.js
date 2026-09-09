@@ -2,6 +2,29 @@
 var error = 0;
 var d = 0;
 var server_status = new Array();
+var stats_summary = ""; // 全部在线节点的汇总：速率与总流量
+
+function fmtRate(bytes) {
+	if(bytes < 1024*1024)
+		return (bytes/1024).toFixed(1) + "K";
+	return (bytes/1024/1024).toFixed(1) + "M";
+}
+
+function fmtTraffic(bytes) {
+	if(bytes < 1024*1024*1024*1024)
+		return (bytes/1024/1024/1024).toFixed(1) + "G";
+	return (bytes/1024/1024/1024/1024).toFixed(1) + "T";
+}
+
+// 把 unix 秒时间戳格式化为 YYYY-MM-DD HH:MM:SS，空值显示 "-"
+function fmtClock(secs) {
+	if(!secs)
+		return "-";
+	var dt = new Date(secs * 1000);
+	var pad = function(n) { return (n < 10 ? "0" : "") + n; };
+	return dt.getFullYear() + "-" + pad(dt.getMonth()+1) + "-" + pad(dt.getDate()) +
+		" " + pad(dt.getHours()) + ":" + pad(dt.getMinutes()) + ":" + pad(dt.getSeconds());
+}
 
 function timeSince(date) {
 	if(date == 0)
@@ -148,7 +171,7 @@ function uptime() {
 					TableRow.children["load"].innerHTML = "–";
 					TableRow.children["network"].innerHTML = "–";
 					TableRow.children["traffic"].innerHTML = "–";
-					TableRow.children["month_traffic"].children[0].children[0].className = "progress-bar progress-bar-warning";
+					TableRow.children["month_traffic"].children[0].children[0].className = "progress-bar progress-bar-danger";
 					TableRow.children["month_traffic"].children[0].children[0].innerHTML = "<small>关闭</small>";
 					TableRow.children["cpu"].children[0].children[0].className = "progress-bar progress-bar-danger";
 					TableRow.children["cpu"].children[0].children[0].style.width = "100%";
@@ -166,10 +189,15 @@ function uptime() {
 					if(ExpandRow.hasClass("in")) {
 						ExpandRow.collapse("hide");
 					}
-					TableRow.setAttribute("data-target", "");
-					MableRow.setAttribute("data-target", "");
+					// 离线时仍保留点击展开：无数据的明细置空，只保留 IP/最后更新行
+					ExpandRow[0].children["expand_mem"].innerHTML = "内存|虚存: -";
+					ExpandRow[0].children["expand_hdd"].innerHTML = "硬盘|读写: -";
+					ExpandRow[0].children["expand_tupd"].innerHTML = "TCP/UDP/进/线: -";
+					ExpandRow[0].children["expand_ping"].innerHTML = "CU/CT/CM: -";
 					server_status[i] = false;
 				}
+				// 离线时展开面板里每帧刷新 IP 与最后更新时间（保留 data-target 使行可点击）
+				ExpandRow[0].children["expand_ip"].innerHTML = "IP: " + (result.servers[i].ip || "-") + "　最后更新: " + fmtClock(result.servers[i].last_update);
 			} else {
 				if (!server_status[i]) {
 					TableRow.setAttribute("data-target", "#rt" + i);
@@ -249,8 +277,8 @@ function uptime() {
 					TableRow.children["memory"].children[0].children[0].className = "progress-bar progress-bar-success";
 				TableRow.children["memory"].children[0].children[0].style.width = Mem + "%";
 				TableRow.children["memory"].children[0].children[0].innerHTML = Mem + "%";
-				// 节点IP
-				ExpandRow[0].children["expand_ip"].innerHTML = "IP: " + (result.servers[i].ip || "-");
+				// 节点IP + 最后更新时间
+				ExpandRow[0].children["expand_ip"].innerHTML = "IP: " + (result.servers[i].ip || "-") + "　最后更新: " + fmtClock(result.servers[i].last_update);
 				// 内存|swap
 				ExpandRow[0].children["expand_mem"].innerHTML = "内存|虚存: " + bytesToSize(result.servers[i].memory_used*1024, 1) + " / " + bytesToSize(result.servers[i].memory_total*1024, 1) + " | " + bytesToSize(result.servers[i].swap_used*1024, 0) + " / " + bytesToSize(result.servers[i].swap_total*1024, 0);
 
@@ -292,18 +320,32 @@ function uptime() {
 				// ping ms + lost rate
 				ExpandRow[0].children["expand_ping"].innerHTML = "CU/CT/CM: " + result.servers[i].time_10010 + "ms ("+result.servers[i].ping_10010.toFixed(0)+"%) / " + result.servers[i].time_189 + "ms ("+result.servers[i].ping_189.toFixed(0)+"%) / " + result.servers[i].time_10086 + "ms ("+result.servers[i].ping_10086.toFixed(0)+"%)"
 
-                if (PING_10010 >= 20 || PING_189 >= 20 || PING_10086 >= 20)
+                if (PING_10010 >= 80 || PING_189 >= 80 || PING_10086 >= 80)
                     TableRow.children["ping"].children[0].children[0].className = "progress-bar progress-bar-danger";
-                else if (PING_10010 >= 10 || PING_189 >= 10 || PING_10086 >= 10)
+                else if (PING_10010 >= 60 || PING_189 >= 60 || PING_10086 >= 60)	
                 	TableRow.children["ping"].children[0].children[0].className = "progress-bar progress-bar-warning";
                 else
                     TableRow.children["ping"].children[0].children[0].className = "progress-bar progress-bar-success";
-	            TableRow.children["ping"].children[0].children[0].innerHTML = PING_10010 + "%💻" + PING_189 + "%💻" + PING_10086 + "%";
+	            TableRow.children["ping"].children[0].children[0].innerHTML = PING_10010 + "-" + PING_189 + "-" + PING_10086 + "";
 
 				// monitor
 				MableRow.children["monitor_text"].innerHTML = result.servers[i].custom;
 			}
 		};
+
+		// 汇总所有在线节点：当前速率（下行|上行）与总流量（下行|上行）
+		var ag_rx = 0, ag_tx = 0, ag_in = 0, ag_out = 0;
+		for (var k = 0; k < rlen; k++) {
+			var svr = result.servers[k];
+			if (svr.online4 || svr.online6) {
+				ag_rx += svr.network_rx || 0;
+				ag_tx += svr.network_tx || 0;
+				ag_in += svr.network_in || 0;
+				ag_out += svr.network_out || 0;
+			}
+		}
+		stats_summary = "当前速率: " + fmtRate(ag_rx) + " | " + fmtRate(ag_tx) +
+			"　总流量: " + fmtTraffic(ag_in) + " | " + fmtTraffic(ag_out);
 
 		d = new Date(result.updated*1000);
 		error = 0;
@@ -356,7 +398,7 @@ function uptime() {
 
 function updateTime() {
 	if (!error)
-		$("#updated").html("最后更新: " + timeSince(d));
+		$("#updated").html("最后更新: " + timeSince(d) + "　" + stats_summary);
 }
 
 uptime();
