@@ -333,19 +333,21 @@ function uptime() {
 			}
 		};
 
-		// 汇总所有在线节点：当前速率（下行|上行）与总流量（下行|上行）
-		var ag_rx = 0, ag_tx = 0, ag_in = 0, ag_out = 0;
+		// 汇总所有在线节点：在线数、当前速率（下行|上行）与总流量（下行|上行）
+		var ag_rx = 0, ag_tx = 0, ag_in = 0, ag_out = 0, ag_online = 0;
 		for (var k = 0; k < rlen; k++) {
 			var svr = result.servers[k];
 			if (svr.online4 || svr.online6) {
+				ag_online++;
 				ag_rx += svr.network_rx || 0;
 				ag_tx += svr.network_tx || 0;
 				ag_in += svr.network_in || 0;
 				ag_out += svr.network_out || 0;
 			}
 		}
-		stats_summary = "当前速率: " + fmtRate(ag_rx) + " | " + fmtRate(ag_tx) +
-			"　总流量: " + fmtTraffic(ag_in) + " | " + fmtTraffic(ag_out);
+		stats_summary = "　在线数: " + ag_online + "/" + rlen +
+			"　当前速率↓|↑: " + fmtRate(ag_rx) + " | " + fmtRate(ag_tx) +
+			"　总流量↓|↑: " + fmtTraffic(ag_in) + " | " + fmtTraffic(ag_out);
 
 		d = new Date(result.updated*1000);
 		error = 0;
