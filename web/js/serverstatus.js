@@ -79,6 +79,7 @@ function uptime() {
 						"<td id=\"ping\"><div class=\"progress\"><div style=\"width: 100%;\" class=\"progress-bar progress-bar-warning\"><small>加载中</small></div></div></td>" +
 					"</tr>" +
 					"<tr class=\"expandRow " + hack + "\"><td colspan=\"16\"><div class=\"accordian-body collapse\" id=\"rt" + i + "\">" +
+						"<div id=\"expand_ip\">加载中</div>" +
 						"<div id=\"expand_mem\">加载中</div>" +
 						"<div id=\"expand_hdd\">加载中</div>" +
 						"<div id=\"expand_tupd\">加载中</div>" +
@@ -248,6 +249,8 @@ function uptime() {
 					TableRow.children["memory"].children[0].children[0].className = "progress-bar progress-bar-success";
 				TableRow.children["memory"].children[0].children[0].style.width = Mem + "%";
 				TableRow.children["memory"].children[0].children[0].innerHTML = Mem + "%";
+				// 节点IP
+				ExpandRow[0].children["expand_ip"].innerHTML = "IP: " + (result.servers[i].ip || "-");
 				// 内存|swap
 				ExpandRow[0].children["expand_mem"].innerHTML = "内存|虚存: " + bytesToSize(result.servers[i].memory_used*1024, 1) + " / " + bytesToSize(result.servers[i].memory_total*1024, 1) + " | " + bytesToSize(result.servers[i].swap_used*1024, 0) + " / " + bytesToSize(result.servers[i].swap_total*1024, 0);
 

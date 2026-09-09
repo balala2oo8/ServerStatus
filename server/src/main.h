@@ -30,6 +30,7 @@ class CMain
 		bool m_Connected;
 		int m_ClientNetID;
 		int m_ClientNetType;
+		char m_aIP[128];            //client source ip, obtained from network layer. by: https://cpp.la
 		char m_aUsername[128];
 		char m_aName[128];
 		char m_aType[128];
