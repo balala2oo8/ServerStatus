@@ -219,7 +219,7 @@ function uptime() {
 				else
 					monthtraffic += (trafficdiff_out/1024/1024/1024/1024).toFixed(1) + "T";
 				TableRow.children["month_traffic"].children[0].children[0].className = "progress-bar progress-bar-success";
-				TableRow.children["month_traffic"].children[0].children[0].innerHTML = "<small>"+monthtraffic+"</small>";
+				TableRow.children["month_traffic"].children[0].children[0].innerHTML = ""+monthtraffic+"";
 
 				// Uptime
 				TableRow.children["uptime"].innerHTML = result.servers[i].uptime;
